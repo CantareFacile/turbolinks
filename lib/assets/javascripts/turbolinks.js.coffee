@@ -28,6 +28,7 @@ define 'turbolinks', ->
     xhr.open 'GET', safeUrl, true
     xhr.setRequestHeader 'Accept', 'text/html, application/xhtml+xml, application/xml'
     xhr.setRequestHeader 'X-XHR-Referer', referer
+    xhr.setRequestHeader 'X-Turbolinks', 'true'
 
     xhr.onload = =>
       doc = createDocument xhr.responseText
