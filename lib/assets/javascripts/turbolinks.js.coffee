@@ -74,6 +74,10 @@ define 'turbolinks', ->
 
     constrainPageCacheTo(10)
 
+  constrainPageCacheTo = (limit) ->
+    for own key, value of pageCache
+      pageCache[key] = null if key <= currentState.position - limit
+
   changePage = (title, body, runScripts) ->
     document.title = title
     document.documentElement.replaceChild body, document.body
@@ -93,27 +97,6 @@ define 'turbolinks', ->
 
   removeNoscriptTags = ->
     noscript.parentNode.removeChild noscript for noscript in document.body.getElementsByTagName 'noscript'
-
-  constrainPageCacheTo = (limit) ->
-    for own key, value of pageCache
-      pageCache[key] = null if key <= currentState.position - limit
-
-  changePage = (title, body, runScripts) ->
-    document.title = title
-    document.documentElement.replaceChild body, document.body
-    executeScriptTags() if runScripts
-    currentState = window.history.state
-    triggerEvent 'page:change'
-
-  executeScriptTags = ->
-    for script in document.body.getElementsByTagName 'script' when script.type in ['', 'text/javascript']
-      copy = document.createElement 'script'
-      copy.setAttribute attr.name, attr.value for attr in script.attributes
-      copy.appendChild document.createTextNode script.innerHTML
-      { parentNode, nextSibling } = script
-      parentNode.removeChild script
-      parentNode.insertBefore copy, nextSibling
-
 
   reflectNewUrl = (url) ->
     if url isnt document.location.href
