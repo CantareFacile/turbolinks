@@ -133,8 +133,6 @@ define 'turbolinks', ->
       link.href = url
     link.href.replace link.hash, ''
 
-<<<<<<< HEAD
-
   triggerEvent = (name) ->
     event = document.createEvent 'Events'
     event.initEvent name, true, true
@@ -175,7 +173,7 @@ define 'turbolinks', ->
       createDocumentUsingParser
     else
       createDocumentUsingWrite
-=======
+
   createDocumentUsingDOM = (html) ->
     doc = document.implementation.createHTMLDocument ''
     doc.documentElement.innerHTML = html
@@ -208,8 +206,6 @@ define 'turbolinks', ->
   finally
     unless testDoc?.body?.childNodes.length is 1
       return createDocumentUsingWrite
->>>>>>> upstream/master
-
 
   installClickHandlerLast = (event) ->
     unless event.defaultPrevented
