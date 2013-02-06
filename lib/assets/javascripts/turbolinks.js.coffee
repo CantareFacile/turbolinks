@@ -28,7 +28,7 @@ define 'turbolinks', ->
     xhr.open 'GET', safeUrl, true
     xhr.setRequestHeader 'Accept', 'text/html, application/xhtml+xml, application/xml'
     xhr.setRequestHeader 'X-XHR-Referer', referer
-    xhr.setRequestHeader 'X-Turbolinks', 'true'
+    xhr.setRequestHeader 'X-Turbolinks', '1'
 
     xhr.onload = =>
       doc = createDocument xhr.responseText
@@ -133,6 +133,7 @@ define 'turbolinks', ->
       link.href = url
     link.href.replace link.hash, ''
 
+
   triggerEvent = (name) ->
     event = document.createEvent 'Events'
     event.initEvent name, true, true
@@ -159,6 +160,11 @@ define 'turbolinks', ->
     createDocumentUsingParser = (html) ->
       (new DOMParser).parseFromString html, 'text/html'
 
+    createDocumentUsingDOM = (html) ->
+      doc = document.implementation.createHTMLDocument ''
+      doc.documentElement.innerHTML = html
+      doc
+
     createDocumentUsingWrite = (html) ->
       doc = document.implementation.createHTMLDocument ''
       doc.open 'replace'
@@ -166,46 +172,28 @@ define 'turbolinks', ->
       doc.close()
       doc
 
-    if window.DOMParser
-      testDoc = createDocumentUsingParser '<html><body><p>test'
+    # Use createDocumentUsingParser if DOMParser is defined and natively
+    # supports 'text/html' parsing (Firefox 12+, IE 10)
+    #
+    # Use createDocumentUsingDOM if createDocumentUsingParser throws an exception
+    # due to unsupported type 'text/html' (Firefox < 12, Opera)
+    #
+    # Use createDocumentUsingWrite if:
+    #  - DOMParser isn't defined
+    #  - createDocumentUsingParser returns null due to unsupported type 'text/html' (Chrome, Safari)
+    #  - createDocumentUsingDOM doesn't create a valid HTML document (safeguarding against potential edge cases)
+    html_string = '<html><body><p>test'
+    try
+      if window.DOMParser
+        testDoc = createDocumentUsingParser html_string
+        createDocumentUsingParser
+    catch e
+      testDoc = createDocumentUsingDOM html_string
+      createDocumentUsingDOM
+    finally
+      unless testDoc?.body?.childNodes.length is 1
+        return createDocumentUsingWrite
 
-    if testDoc?.body?.childNodes.length is 1
-      createDocumentUsingParser
-    else
-      createDocumentUsingWrite
-
-  createDocumentUsingDOM = (html) ->
-    doc = document.implementation.createHTMLDocument ''
-    doc.documentElement.innerHTML = html
-    doc
-
-  createDocumentUsingWrite = (html) ->
-    doc = document.implementation.createHTMLDocument ''
-    doc.open 'replace'
-    doc.write html
-    doc.close()
-    doc
-
-  # Use createDocumentUsingParser if DOMParser is defined and natively
-  # supports 'text/html' parsing (Firefox 12+, IE 10)
-  #
-  # Use createDocumentUsingDOM if createDocumentUsingParser throws an exception
-  # due to unsupported type 'text/html' (Firefox < 12, Opera)
-  #
-  # Use createDocumentUsingWrite if:
-  #  - DOMParser isn't defined
-  #  - createDocumentUsingParser returns null due to unsupported type 'text/html' (Chrome, Safari)
-  #  - createDocumentUsingDOM doesn't create a valid HTML document (safeguarding against potential edge cases)
-  try
-    if window.DOMParser
-      testDoc = createDocumentUsingParser '<html><body><p>test'
-      createDocumentUsingParser
-  catch e
-    testDoc = createDocumentUsingDOM '<html><body><p>test'
-    createDocumentUsingDOM
-  finally
-    unless testDoc?.body?.childNodes.length is 1
-      return createDocumentUsingWrite
 
   installClickHandlerLast = (event) ->
     unless event.defaultPrevented
