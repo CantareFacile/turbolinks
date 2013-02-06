@@ -74,6 +74,26 @@ define 'turbolinks', ->
 
     constrainPageCacheTo(10)
 
+  changePage = (title, body, runScripts) ->
+    document.title = title
+    document.documentElement.replaceChild body, document.body
+    removeNoscriptTags()
+    executeScriptTags() if runScripts
+    currentState = window.history.state
+    triggerEvent 'page:change'
+
+  executeScriptTags = ->
+    for script in document.body.getElementsByTagName 'script' when script.type in ['', 'text/javascript']
+      copy = document.createElement 'script'
+      copy.setAttribute attr.name, attr.value for attr in script.attributes
+      copy.appendChild document.createTextNode script.innerHTML
+      { parentNode, nextSibling } = script
+      parentNode.removeChild script
+      parentNode.insertBefore copy, nextSibling
+
+  removeNoscriptTags = ->
+    noscript.parentNode.removeChild noscript for noscript in document.body.getElementsByTagName 'noscript'
+
   constrainPageCacheTo = (limit) ->
     for own key, value of pageCache
       pageCache[key] = null if key <= currentState.position - limit
@@ -130,6 +150,7 @@ define 'turbolinks', ->
       link.href = url
     link.href.replace link.hash, ''
 
+<<<<<<< HEAD
 
   triggerEvent = (name) ->
     event = document.createEvent 'Events'
@@ -171,6 +192,40 @@ define 'turbolinks', ->
       createDocumentUsingParser
     else
       createDocumentUsingWrite
+=======
+  createDocumentUsingDOM = (html) ->
+    doc = document.implementation.createHTMLDocument ''
+    doc.documentElement.innerHTML = html
+    doc
+
+  createDocumentUsingWrite = (html) ->
+    doc = document.implementation.createHTMLDocument ''
+    doc.open 'replace'
+    doc.write html
+    doc.close()
+    doc
+
+  # Use createDocumentUsingParser if DOMParser is defined and natively
+  # supports 'text/html' parsing (Firefox 12+, IE 10)
+  #
+  # Use createDocumentUsingDOM if createDocumentUsingParser throws an exception
+  # due to unsupported type 'text/html' (Firefox < 12, Opera)
+  #
+  # Use createDocumentUsingWrite if:
+  #  - DOMParser isn't defined
+  #  - createDocumentUsingParser returns null due to unsupported type 'text/html' (Chrome, Safari)
+  #  - createDocumentUsingDOM doesn't create a valid HTML document (safeguarding against potential edge cases)
+  try
+    if window.DOMParser
+      testDoc = createDocumentUsingParser '<html><body><p>test'
+      createDocumentUsingParser
+  catch e
+    testDoc = createDocumentUsingDOM '<html><body><p>test'
+    createDocumentUsingDOM
+  finally
+    unless testDoc?.body?.childNodes.length is 1
+      return createDocumentUsingWrite
+>>>>>>> upstream/master
 
 
   installClickHandlerLast = (event) ->
