@@ -96,7 +96,8 @@ define 'turbolinks', ->
       parentNode.insertBefore copy, nextSibling
 
   removeNoscriptTags = ->
-    noscript.parentNode.removeChild noscript for noscript in document.body.getElementsByTagName 'noscript'
+    noscriptTags = Array::slice.call document.body.getElementsByTagName 'noscript'
+    noscript.parentNode.removeChild noscript for noscript in noscriptTags
 
   reflectNewUrl = (url) ->
     if url isnt document.location.href
@@ -182,13 +183,12 @@ define 'turbolinks', ->
     #  - DOMParser isn't defined
     #  - createDocumentUsingParser returns null due to unsupported type 'text/html' (Chrome, Safari)
     #  - createDocumentUsingDOM doesn't create a valid HTML document (safeguarding against potential edge cases)
-    html_string = '<html><body><p>test'
     try
       if window.DOMParser
-        testDoc = createDocumentUsingParser html_string
+        testDoc = createDocumentUsingParser '<html><body><p>test'
         createDocumentUsingParser
     catch e
-      testDoc = createDocumentUsingDOM html_string
+      testDoc = createDocumentUsingDOM '<html><body><p>test'
       createDocumentUsingDOM
     finally
       unless testDoc?.body?.childNodes.length is 1
