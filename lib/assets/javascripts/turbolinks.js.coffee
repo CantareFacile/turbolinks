@@ -9,7 +9,7 @@ define 'turbolinks', ->
   xhr            = null
 
   visit = (url) ->
-    if browserSupportsPushState
+    if browserSupportsPushState && browserIsntBuggy
       cacheCurrentPage()
       reflectNewUrl url
       fetchReplacement url
@@ -28,12 +28,11 @@ define 'turbolinks', ->
     xhr.open 'GET', safeUrl, true
     xhr.setRequestHeader 'Accept', 'text/html, application/xhtml+xml, application/xml'
     xhr.setRequestHeader 'X-XHR-Referer', referer
-    xhr.setRequestHeader 'X-Turbolinks', '1'
 
     xhr.onload = =>
-      doc = createDocument xhr.responseText
+      triggerEvent 'page:receive'
 
-      if assetsChanged doc
+      if invalidContent(xhr) or assetsChanged (doc = createDocument xhr.responseText)
         document.location.reload()
       else
         changePage extractTitleAndBody(doc)...
@@ -87,7 +86,8 @@ define 'turbolinks', ->
     triggerEvent 'page:change'
 
   executeScriptTags = ->
-    for script in document.body.getElementsByTagName 'script' when script.type in ['', 'text/javascript']
+    scripts = Array::slice.call document.body.getElementsByTagName 'script'
+    for script in scripts when script.type in ['', 'text/javascript']
       copy = document.createElement 'script'
       copy.setAttribute attr.name, attr.value for attr in script.attributes
       copy.appendChild document.createTextNode script.innerHTML
@@ -140,6 +140,9 @@ define 'turbolinks', ->
     event.initEvent name, true, true
     document.dispatchEvent event
 
+
+  invalidContent = (xhr) ->
+    !xhr.getResponseHeader('Content-Type').match /^(?:text\/html|application\/xhtml\+xml|application\/xml)(?:;|$)/
 
   extractTrackAssets = (doc) ->
     (node.src || node.href) for node in doc.head.childNodes when node.getAttribute?('data-turbolinks-track')?
@@ -197,8 +200,8 @@ define 'turbolinks', ->
 
   installClickHandlerLast = (event) ->
     unless event.defaultPrevented
-      document.removeEventListener 'click', handleClick
-      document.addEventListener 'click', handleClick
+      document.removeEventListener 'click', handleClick, false
+      document.addEventListener 'click', handleClick, false
 
   handleClick = (event) ->
     unless event.defaultPrevented
@@ -221,7 +224,8 @@ define 'turbolinks', ->
       (link.href is location.href + '#')
 
   nonHtmlLink = (link) ->
-    link.href.match(/\.[a-z]+(\?.*)?$/g) and not link.href.match(/\.html?(\?.*)?$/g)
+    url = removeHash link
+    url.match(/\.[a-z]+(\?.*)?$/g) and not url.match(/\.html?(\?.*)?$/g)
 
   noTurbolink = (link) ->
     until ignore or link is document
@@ -243,6 +247,7 @@ define 'turbolinks', ->
     document.addEventListener 'click', installClickHandlerLast, true
     window.addEventListener 'popstate', (event) ->
       fetchHistory event.state if event.state?.turbolinks
+    , false
 
   browserSupportsPushState =
     window.history and window.history.pushState and window.history.replaceState and window.history.state != undefined
