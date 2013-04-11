@@ -76,10 +76,12 @@ define 'turbolinks', ->
   constrainPageCacheTo = (limit) ->
     for own key, value of pageCache
       pageCache[key] = null if key <= currentState.position - limit
+    return
 
-  changePage = (title, body, runScripts) ->
+  changePage = (title, body, csrfToken, runScripts) ->
     document.title = title
     document.documentElement.replaceChild body, document.body
+    CSRFToken.update csrfToken if csrfToken?
     removeNoscriptTags()
     executeScriptTags() if runScripts
     currentState = window.history.state
@@ -94,10 +96,12 @@ define 'turbolinks', ->
       { parentNode, nextSibling } = script
       parentNode.removeChild script
       parentNode.insertBefore copy, nextSibling
+    return
 
   removeNoscriptTags = ->
     noscriptTags = Array::slice.call document.body.getElementsByTagName 'noscript'
     noscript.parentNode.removeChild noscript for noscript in noscriptTags
+    return
 
   reflectNewUrl = (url) ->
     if url isnt document.location.href
@@ -158,7 +162,17 @@ define 'turbolinks', ->
 
   extractTitleAndBody = (doc) ->
     title = doc.querySelector 'title'
-    [ title?.textContent, doc.body, 'runScripts' ]
+    [ title?.textContent, doc.body, CSRFToken.get(doc).token, 'runScripts' ]
+
+  CSRFToken =
+    get: (doc = document) ->
+      node:   tag = doc.querySelector 'meta[name="csrf-token"]'
+      token:  tag?.getAttribute? 'content'
+
+    update: (latest) ->
+      current = @get()
+      if current.token? and latest? and current.token isnt latest
+        current.node.setAttribute 'content', latest
 
   browserCompatibleDocumentParser = ->
     createDocumentUsingParser = (html) ->
