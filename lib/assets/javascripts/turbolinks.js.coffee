@@ -29,14 +29,12 @@ define 'turbolinks', ->
     xhr.setRequestHeader 'Accept', 'text/html, application/xhtml+xml, application/xml'
     xhr.setRequestHeader 'X-XHR-Referer', referer
 
-    xhr.onload = =>
+    xhr.onload = ->
       triggerEvent 'page:receive'
 
-      if invalidContent(xhr) or assetsChanged (doc = createDocument xhr.responseText)
-        document.location.reload()
-      else
+      if doc = validateResponse()
         changePage extractTitleAndBody(doc)...
-        reflectRedirectedUrl xhr
+        reflectRedirectedUrl()
         if document.location.hash
           document.location.href = document.location.href
         else
@@ -88,7 +86,7 @@ define 'turbolinks', ->
     triggerEvent 'page:change'
 
   executeScriptTags = ->
-    scripts = Array::slice.call document.body.getElementsByTagName 'script'
+    scripts = Array::slice.call document.body.querySelectorAll 'script:not([data-turbolinks-eval="false"])'
     for script in scripts when script.type in ['', 'text/javascript']
       copy = document.createElement 'script'
       copy.setAttribute attr.name, attr.value for attr in script.attributes
@@ -108,9 +106,10 @@ define 'turbolinks', ->
       referer = document.location.href
       window.history.pushState { turbolinks: true, position: currentState.position + 1 }, '', url
 
-  reflectRedirectedUrl = (xhr) ->
-    if (location = xhr.getResponseHeader 'X-XHR-Current-Location') and location isnt document.location.pathname + document.location.search
-      window.history.replaceState currentState, '', location + document.location.hash
+  reflectRedirectedUrl = ->
+    if location = xhr.getResponseHeader 'X-XHR-Redirected-To'
+      preservedHash = if removeHash(location) is location then document.location.hash else ''
+      window.history.replaceState currentState, '', location + preservedHash
 
   rememberCurrentUrl = ->
     window.history.replaceState { turbolinks: true, position: Date.now() }, '', document.location.href
@@ -138,27 +137,42 @@ define 'turbolinks', ->
       link.href = url
     link.href.replace link.hash, ''
 
-
   triggerEvent = (name) ->
     event = document.createEvent 'Events'
     event.initEvent name, true, true
     document.dispatchEvent event
 
 
-  invalidContent = (xhr) ->
-    !xhr.getResponseHeader('Content-Type').match /^(?:text\/html|application\/xhtml\+xml|application\/xml)(?:;|$)/
+  validateResponse = ->
+    clientError = ->
+      xhr.status.toString().match /^4/
 
-  extractTrackAssets = (doc) ->
-    (node.src || node.href) for node in doc.head.childNodes when node.getAttribute?('data-turbolinks-track')?
+    invalidContent = ->
+      !xhr.getResponseHeader('Content-Type').match /^(?:text\/html|application\/xhtml\+xml|application\/xml)(?:;|$)/
 
-  assetsChanged = (doc) ->
-    loadedAssets ||= extractTrackAssets document
-    fetchedAssets  = extractTrackAssets doc
-    fetchedAssets.length isnt loadedAssets.length or intersection(fetchedAssets, loadedAssets).length isnt loadedAssets.length
+    extractTrackAssets = (doc) ->
+      (node.src || node.href) for node in doc.head.childNodes when node.getAttribute?('data-turbolinks-track')?
 
-  intersection = (a, b) ->
-    [a, b] = [b, a] if a.length > b.length
-    value for value in a when value in b
+    assetsChanged = (doc) ->
+      loadedAssets ||= extractTrackAssets document
+      fetchedAssets  = extractTrackAssets doc
+      fetchedAssets.length isnt loadedAssets.length or intersection(fetchedAssets, loadedAssets).length isnt loadedAssets.length
+
+    intersection = (a, b) ->
+      [a, b] = [b, a] if a.length > b.length
+      value for value in a when value in b
+
+    if clientError()
+      # Workaround for WebKit bug (https://bugs.webkit.org/show_bug.cgi?id=93506)
+      url = document.location.href
+      window.history.replaceState null, '', '#'
+      window.location.replace url
+      false
+    else if invalidContent() or assetsChanged (doc = createDocument xhr.responseText)
+      window.location.reload()
+      false
+    else
+      doc
 
   extractTitleAndBody = (doc) ->
     title = doc.querySelector 'title'

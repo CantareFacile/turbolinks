@@ -1,3 +1,27 @@
+## Turbolinks (master) ##
+
+*   Add the ability to not execute scripts on turbolinks page loads by
+    specifying `data-turbolinks-eval=false` on the `<script>` tag. For example:
+    `<script type="text/javascript" data-turbolinks-eval=false>`
+
+    *Mario Visic*
+
+*   Workaround for WebKit history state [bug](https://bugs.webkit.org/show_bug.cgi?id=93506) 
+    with regards to the handling of 4xx responses.
+    
+    *Yasuharu Ozaki*
+    
+*   Extracted `fetchReplacement()` onload response-handling logic out into `validateResponse()`.
+
+    *Nick Reed*
+
+*   Changed response header name from `X-XHR-Current-Location` to `X-XHR-Redirected-To`.  The
+    header will only be sent if there has been a redirect.  Fixes compatibility issue when 
+    using `redirect_to` with options such as anchors or a trailing slash by storing the redirect
+    location in a session variable and then using that value to set the response header.
+
+    *Yasuharu Ozaki*
+
 ## Turbolinks 1.1.1 (April 3, 2013) ##
 
 *   Improve performance of `constrainPageCacheTo`, `executeScriptTags`, and `removeNoscriptTags`

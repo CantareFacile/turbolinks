@@ -27,20 +27,26 @@ Turbolinks is designed to be as light-weight as possible (so you won't think twi
 Events
 ------
 
-Since pages will change without a full reload with Turbolinks, you can't by default rely on `DOMContentLoaded` to trigger your JavaScript code or jQuery.ready(). Instead, Turbolinks fires events on `document` to provide hooks into the lifecycle of the page:
+With Turbolinks pages will change without a full reload, so you can't rely on `DOMContentLoaded` or `jQuery.ready()` to trigger your code. Instead Turbolinks fires events on `document` to provide hooks into the lifecycle of the page:
 
-* `page:fetch`   starting to fetch the target page (only called if loading fresh, not from cache).
-* `page:load`    fetched page is being retrieved fresh from the server.
-* `page:restore` fetched page is being retrieved from the 10-slot client-side cache.
-* `page:change`  page has changed to the newly fetched version.
-* `page:receive` page has been fetched from the server, but not yet parsed.
+*Load* a fresh version of a page from the server:
+* `page:fetch` starting to fetch a new target page
+* `page:receive` the page has been fetched from the server, but not yet parsed
+* `page:change` the page has been parsed and changed to the new version
+* `page:load` is fired at the end of the loading process.
+
+Turbolinks caches 10 of these page loads. It listens to the [popstate](https://developer.mozilla.org/en-US/docs/DOM/Manipulating_the_browser_history#The_popstate_event) event and attempts restore page state from the cache when it's triggered. When `popstate` is fired the following process happens:
+
+*Restore* a cached page from the client-side cache:
+* `page:change` page has changed to the cached page.
+* `page:restore` is fired at the end of restore process.
 
 So if you wanted to have a client-side spinner, you could listen for `page:fetch` to start it and `page:receive` to stop it.
 
     document.addEventListener("page:fetch", startSpinner);
     document.addEventListener("page:receive", stopSpinner);
     
-If you have DOM transformation that are not idempotent (the best way), you can hook them to happen only on `page:load` instead of `page:change` (as that would run them again on the cached pages).
+DOM transformations that are idempotent are best. If you have transformations that are not, hook them to happen only on `page:load` instead of `page:change` (as that would run them again on the cached pages).
 
 Initialization
 --------------
@@ -61,6 +67,13 @@ Opting out of Turbolinks
 ------------------------
 
 By default, all internal HTML links will be funneled through Turbolinks, but you can opt out by marking links or their parent container with `data-no-turbolink`. For example, if you mark a div with `data-no-turbolink`, then all links inside of that div will be treated as regular links. If you mark the body, every link on that entire page will be treated as regular links.
+
+```html
+<a href="/">Home (via Turbolinks)</a>
+<div id="some-div" data-no-turbolink>
+  <a href="/">Home (without Turbolinks)</a>
+</div>
+```
 
 Note that internal links to files not ending in .html, or having no extension, will automatically be opted out of Turbolinks. So links to /images/panda.gif will just work as expected.
 
@@ -97,7 +110,13 @@ Evaluating script tags
 
 Turbolinks will evaluate any script tags in pages it visit, if those tags do not have a type or if the type is text/javascript. All other script tags will be ignored.
 
-As a rule of thumb when switching to Turbolinks, move all of your javascript tags inside the `head` and then work backwards, only moving javascript code back to the body if absolutely necessary.
+As a rule of thumb when switching to Turbolinks, move all of your javascript tags inside the `head` and then work backwards, only moving javascript code back to the body if absolutely necessary. If you have any script tags in the body you do not want to be re-evaluated then you can set the `data-turbolinks-eval` attribute to `false`:
+
+```html
+<script type="text/javascript" data-turbolinks-eval=false>
+  console.log("I'm only run once on the initial page load");
+</script>
+```
 
 Triggering a Turbolinks visit manually
 ---------------------------------------
