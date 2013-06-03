@@ -1,4 +1,8 @@
-## Turbolinks (master) ##
+## Turbolinks 1.2.0 (June 2, 2013) ##
+
+*   Handle 5xx responses
+
+    *Marek Labos*
 
 *   Add the ability to not execute scripts on turbolinks page loads by
     specifying `data-turbolinks-eval=false` on the `<script>` tag. For example:
@@ -21,6 +25,10 @@
     location in a session variable and then using that value to set the response header.
 
     *Yasuharu Ozaki*
+
+*   Escape URLs when checking for cross-origin redirects.
+
+    *Nick Reed*
 
 ## Turbolinks 1.1.1 (April 3, 2013) ##
 
