@@ -1,3 +1,26 @@
+## Turbolinks 1.3.0 (July 11, 2013) ##
+
+*   Change URL *after* fetching page.
+
+    *Marek Labos*
+
+*   Fix compatibility with `link_to :back`.
+
+    *Marek Labos*
+
+*   Send correct referer after asset change detected.
+
+    *Marek Labos*
+    
+*   Add the `page:before-change` event, triggered when a Turbolinks-enabled link is clicked.
+    Can be used to cancel the Turbolinks process.
+
+    *Nick Reed*
+
+*   Add Turbolinks.pagesCached() to the public API for getting and setting the size of the page cache.
+
+    *Nick Reed*
+
 ## Turbolinks 1.2.0 (June 2, 2013) ##
 
 *   Handle 5xx responses
