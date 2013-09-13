@@ -18,10 +18,10 @@ In any case, the benefit can be up to [twice as fast](https://github.com/stevekl
 The best way to find out just how fast it is? Try it on your own application. It hardly takes any effort at all.
 
 
-No jQuery or any other framework
+No jQuery or any other library
 --------------------------------
 
-Turbolinks is designed to be as light-weight as possible (so you won't think twice about using it even for mobile stuff). It does not require jQuery or any other framework to work. But it works great _with_ jQuery or Prototype or whatever else have you.
+Turbolinks is designed to be as light-weight as possible (so you won't think twice about using it even for mobile stuff). It does not require jQuery or any other library to work. But it works great _with_ the jQuery or Prototype framework, or whatever else have you.
 
 
 Events
@@ -33,10 +33,11 @@ With Turbolinks pages will change without a full reload, so you can't rely on `D
 * `page:before-change` a Turbolinks-enabled link has been clicked *(see below for more details)*
 * `page:fetch` starting to fetch a new target page
 * `page:receive` the page has been fetched from the server, but not yet parsed
-* `page:change` the page has been parsed and changed to the new version
+* `page:change` the page has been parsed and changed to the new version and on DOMContentLoaded
+* `page:update` is triggered whenever page:change is PLUS on jQuery's ajaxSucess, if jQuery is available (otherwise you can manually trigger it when calling XMLHttpRequest in your own code)
 * `page:load` is fired at the end of the loading process.
 
-Handlers bound to the `page:before-change` event may return `false`, which will cancel the Turbolinks process. 
+Handlers bound to the `page:before-change` event may return `false`, which will cancel the Turbolinks process.
 
 By default, Turbolinks caches 10 of these page loads. It listens to the [popstate](https://developer.mozilla.org/en-US/docs/DOM/Manipulating_the_browser_history#The_popstate_event) event and attempts to restore page state from the cache when it's triggered. When `popstate` is fired the following process happens:
 
@@ -58,7 +59,7 @@ To implement a client-side spinner, you could listen for `page:fetch` to start i
 
     document.addEventListener("page:fetch", startSpinner);
     document.addEventListener("page:receive", stopSpinner);
-    
+
 DOM transformations that are idempotent are best. If you have transformations that are not, hook them to happen only on `page:load` instead of `page:change` (as that would run them again on the cached pages).
 
 Initialization
@@ -88,7 +89,7 @@ By default, all internal HTML links will be funneled through Turbolinks, but you
 </div>
 ```
 
-Note that internal links to files not ending in .html, or having no extension, will automatically be opted out of Turbolinks. So links to /images/panda.gif will just work as expected.
+Note that internal links to files containing a file extension other than **.html** will automatically be opted out of Turbolinks. So links to /images/panda.gif will just work as expected.
 
 Also, Turbolinks is installed as the last click handler for links. So if you install another handler that calls event.preventDefault(), Turbolinks will not run. This ensures that you can safely use Turbolinks with stuff like `data-method`, `data-remote`, or `data-confirm` from Rails.
 
@@ -139,6 +140,8 @@ Triggering a Turbolinks visit manually
 
 You can use `Turbolinks.visit(path)` to go to a URL through Turbolinks.
 
+You can also use `redirect_via_turbolinks_to` in Rails to perform a redirect via Turbolinks.
+
 
 Full speed for pushState browsers, graceful fallback for everything else
 ------------------------------------------------------------------------
@@ -165,7 +168,10 @@ Installation
 Language Ports
 --------------
 
+*These projects are not affiliated with or endorsed by the Rails Turbolinks team.*
+
 * [Flask Turbolinks](https://github.com/lepture/flask-turbolinks) (Python Flask)
+* [ASP.NET MVC Turbolinks](https://github.com/kazimanzurrashid/aspnetmvcturbolinks)
 
 Credits
 -------
