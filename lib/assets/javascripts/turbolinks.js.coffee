@@ -266,13 +266,15 @@ define 'turbolinks', ->
 
 
   installDocumentReadyPageEventTriggers = ->
-    triggerEvent 'page:change'
-    triggerEvent 'page:update'
+    document.addEventListener 'DOMContentLoaded', ( ->
+      triggerEvent 'page:change'
+      triggerEvent 'page:update'
+    ), true
 
   installJqueryAjaxSuccessPageUpdateTrigger = ->
     if typeof jQuery isnt 'undefined'
-      $(document).on 'ajaxSuccess', (event, xhr, settings) ->
-        return unless $.trim xhr.responseText
+      jQuery(document).on 'ajaxSuccess', (event, xhr, settings) ->
+        return unless jQuery.trim xhr.responseText
         triggerEvent 'page:update'
 
   installHistoryChangeHandler = (event) ->
@@ -288,10 +290,6 @@ define 'turbolinks', ->
     createDocument = browserCompatibleDocumentParser()
 
     document.addEventListener 'click', installClickHandlerLast, true
-    document.addEventListener 'DOMContentLoaded', installDocumentReadyPageEventTriggers, true
-
-    installJqueryAjaxSuccessPageUpdateTrigger()
-
     window.addEventListener 'popstate', installHistoryChangeHandler, false
 
   browserSupportsPushState =
@@ -305,6 +303,9 @@ define 'turbolinks', ->
 
   browserSupportsTurbolinks = browserSupportsPushState and browserIsntBuggy and requestMethodIsSafe
 
+  installDocumentReadyPageEventTriggers()
+  installJqueryAjaxSuccessPageUpdateTrigger()
+
   if browserSupportsTurbolinks
     visit = fetchReplacement
     initializeTurbolinks()
@@ -316,4 +317,4 @@ define 'turbolinks', ->
   #   Turbolinks.pagesCached()
   #   Turbolinks.pagesCached(20)
   #   Turbolinks.supported
-  @Turbolinks = { visit, pagesCached, supported: browserSupportsTurbolinks }
+  { visit, pagesCached, supported: browserSupportsTurbolinks }
