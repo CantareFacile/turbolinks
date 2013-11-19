@@ -152,7 +152,8 @@ define 'turbolinks', ->
       xhr.getResponseHeader('Content-Type').match /^(?:text\/html|application\/xhtml\+xml|application\/xml)(?:;|$)/
 
     extractTrackAssets = (doc) ->
-      (node.src || node.href) for node in doc.head.childNodes when node.getAttribute?('data-turbolinks-track')?
+      for node in doc.head.childNodes when node.getAttribute?('data-turbolinks-track')?
+        node.getAttribute('src') or node.getAttribute('href')
 
     assetsChanged = (doc) ->
       loadedAssets ||= extractTrackAssets document
