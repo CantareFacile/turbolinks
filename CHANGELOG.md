@@ -1,4 +1,26 @@
-## Turbolinks 2.0.0 (unreleased) ##
+## Turbolinks (master)
+
+*   Improve browser support for `noscript` tag removal.
+
+    *Nick Reed*
+
+*   Add a `page:expire` event for garbage collecting purposes.  Triggered when a page is deleted
+    from the cache due to reaching the cache size limit.  Pass the cached page object in with the
+    event data. 
+
+    *Nick Reed*
+
+*   Allow configuration for additional link extensions to be processed by Turbolinks beyond `.html`.
+
+    ```coffeescript
+    Turbolinks.allowLinkExtensions()                # => ['html']
+    Turbolinks.allowLinkExtensions 'md'             # => ['html', 'md']
+    Turbolinks.allowLinkExtensions 'coffee', 'scss' # => ['html', 'md', 'coffee', 'scss']
+    ```
+
+    *Nick Reed*
+    
+## Turbolinks 2.0.0 (December 4, 2013) ##
 
 *   Trigger page:update on page:change as well as jQuery's ajaxSuccess, if jQuery is available.
     This allows you to bind listeners to both full page changes and partial ajax updates.
