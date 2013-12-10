@@ -3,6 +3,7 @@ define 'turbolinks', ->
   cacheSize      = 10
   currentState   = null
   loadedAssets   = null
+  htmlExtensions = ['html']
 
   referer        = null
 
@@ -61,15 +62,15 @@ define 'turbolinks', ->
     cacheSize = parseInt(size) if /^[\d]+$/.test size
 
   constrainPageCacheTo = (limit) ->
-    for own key, value of pageCache
-      pageCache[key] = null if key <= currentState.position - limit
+    for own key, value of pageCache when key <= currentState.position - limit
+      triggerEvent 'page:expire', pageCache[key]
+      pageCache[key] = null
     return
 
   changePage = (title, body, csrfToken, runScripts) ->
     document.title = title
     document.documentElement.replaceChild body, document.body
     CSRFToken.update csrfToken if csrfToken?
-    removeNoscriptTags()
     executeScriptTags() if runScripts
     currentState = window.history.state
     triggerEvent 'page:change'
@@ -86,10 +87,9 @@ define 'turbolinks', ->
       parentNode.insertBefore copy, nextSibling
     return
 
-  removeNoscriptTags = ->
-    noscriptTags = Array::slice.call document.body.getElementsByTagName 'noscript'
-    noscript.parentNode.removeChild noscript for noscript in noscriptTags
-    return
+  removeNoscriptTags = (node) ->
+    node.innerHTML = node.innerHTML.replace /<noscript[\S\s]*?<\/noscript>/ig, ''
+    node
 
   reflectNewUrl = (url) ->
     if url isnt referer
@@ -171,7 +171,7 @@ define 'turbolinks', ->
 
   extractTitleAndBody = (doc) ->
     title = doc.querySelector 'title'
-    [ title?.textContent, doc.body, CSRFToken.get(doc).token, 'runScripts' ]
+    [ title?.textContent, removeNoscriptTags(doc.body), CSRFToken.get(doc).token, 'runScripts' ]
 
   CSRFToken =
     get: (doc = document) ->
@@ -248,7 +248,7 @@ define 'turbolinks', ->
 
   nonHtmlLink = (link) ->
     url = removeHash link
-    url.match(/\.[a-z]+(\?.*)?$/g) and not url.match(/\.html?(\?.*)?$/g)
+    url.match(/\.[a-z]+(\?.*)?$/g) and not url.match(new RegExp("\\.(?:#{htmlExtensions.join('|')})?(\\?.*)?$", 'g'))
 
   noTurbolink = (link) ->
     until ignore or link is document
@@ -265,6 +265,9 @@ define 'turbolinks', ->
   ignoreClick = (event, link) ->
     crossOriginLink(link) or anchoredLink(link) or nonHtmlLink(link) or noTurbolink(link) or targetLink(link) or nonStandardClick(event)
 
+  allowLinkExtensions = (extensions...) ->
+    htmlExtensions.push extension for extension in extensions
+    htmlExtensions
 
   installDocumentReadyPageEventTriggers = ->
     document.addEventListener 'DOMContentLoaded', ( ->
@@ -317,5 +320,6 @@ define 'turbolinks', ->
   #   Turbolinks.visit(url)
   #   Turbolinks.pagesCached()
   #   Turbolinks.pagesCached(20)
+  #   Turbolinks.allowLinkExtensions('md')
   #   Turbolinks.supported
-  { visit, pagesCached, supported: browserSupportsTurbolinks }
+  { visit, pagesCached, allowLinkExtensions, supported: browserSupportsTurbolinks }
