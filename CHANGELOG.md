@@ -1,4 +1,12 @@
-## Turbolinks (master)
+## Turbolinks 2.2.0 (January 10, 2014)
+
+*   Add transition cache feature. When enabled, cached copies of pages will be shown
+    before fetching and displaying a new copy from the server. A individual page can be opted-out
+    by adding `data-no-transition-cache` to any DOM element on the page.
+
+    *Matt De Leon*
+
+## Turbolinks 2.1.0 (December 17, 2013)
 
 *   Improve browser support for `noscript` tag removal.
 
@@ -19,7 +27,12 @@
     ```
 
     *Nick Reed*
-    
+
+*   Handle [bug](https://bugzilla.mozilla.org/show_bug.cgi?id=949471) in Firefox 26 where the initial
+    value of history.state is undefined instead of null, which led to Turbolinks not being initialized.
+
+    *Nick Reed*
+
 ## Turbolinks 2.0.0 (December 4, 2013) ##
 
 *   Trigger page:update on page:change as well as jQuery's ajaxSuccess, if jQuery is available.

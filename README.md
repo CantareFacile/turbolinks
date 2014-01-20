@@ -64,6 +64,22 @@ To implement a client-side spinner, you could listen for `page:fetch` to start i
 
 DOM transformations that are idempotent are best. If you have transformations that are not, hook them to happen only on `page:load` instead of `page:change` (as that would run them again on the cached pages).
 
+Transition Cache: A Speed Boost
+-------------------------------
+
+Transition Cache, added in v2.2.0, makes loading cached pages instantaneous. Once a user has visited a page, returning later to the page results in an instant load.
+
+For example, if Page A is already cached by Turbolinks and you are on Page B, clicking a link to Page A will *immediately* display the cached copy of Page A. Turbolinks will then fetch Page A from the server and replace the cached page once the new copy is returned.
+
+To enable Transition Cache, include the following in your javascript:
+```javascript
+Turbolinks.enableTransitionCache();
+```
+
+The one drawback is that dramatic differences in appearence between a cached copy and new copy may lead to a jarring affect for the end-user. This will be especially true for pages that have many moving parts (expandable sections, sortable tables, infinite scrolling, etc.).
+
+If you find that a page is causing problems, you can have Turbolinks skip displaying the cached copy by adding `data-no-transition-cache` to any DOM element on the offending page.
+
 Initialization
 --------------
 
@@ -170,7 +186,7 @@ Installation
 
 1. Add `gem 'turbolinks'` to your Gemfile.
 1. Run `bundle install`.
-1. Add `//= require turbolinks` to your Javascript manifest file (usually found at `app/assets/javascripts/application.js`).
+1. Add `//= require turbolinks` to your Javascript manifest file (usually found at `app/assets/javascripts/application.js`). If your manifest requires both turbolinks and jQuery, make sure turbolinks is listed *after* jQuery.
 1. Restart your server and you're now using turbolinks!
 
 Language Ports
@@ -180,6 +196,7 @@ Language Ports
 
 * [Flask Turbolinks](https://github.com/lepture/flask-turbolinks) (Python Flask)
 * [ASP.NET MVC Turbolinks](https://github.com/kazimanzurrashid/aspnetmvcturbolinks)
+* [PHP Turbolinks Component](https://github.com/helthe/Turbolinks) (Symfony Component)
 
 Credits
 -------
