@@ -1,3 +1,44 @@
+## Turbolinks (master)
+
+*   Always use absolute URLs as cache keys and in state objects.  Eliminates possibility of multiple 
+    cache objects for the same page. 
+
+    *Nick Reed*
+
+*   Allow periods in a link's query string (ex. `/users?sort=account.email`) without it interfering with 
+    the extension check.
+
+    *Kuba Kuźma*
+
+*   Don't process links with no `href` attribute.
+
+    *Nick Reed*
+
+## Turbolinks 2.2.1 (January 30, 2014)
+
+*   Do not store redirect_to location in session if the request did not come from Turbolinks.  Fixes
+    rare bug that manifests when directing items like image tag sources through ActionController and 
+    subsequently redirecting those requests to a different origin. This would cause the session variable 
+    to be set but never deleted (since the redirect request was external), resulting in the next request
+    being declared a redirect no matter what. 
+
+    *Nick Reed*
+
+*   Extend handling of Firefox [history.state bug](https://bugzilla.mozilla.org/show_bug.cgi?id=949471) 
+    through Firefox 27.
+
+    *Nick Reed*
+    
+*   Fix handling of `:back` option in ActionView helpers `url_for` and `link_to`.
+
+    *Nick Reed*
+
+*   Delay binding of history change handler long enough to bypass the popstate event that some
+    browsers fire on the initial page load.  Prevents duplicate requests in certain scenarios when
+    traversing the browser history.
+
+    *Anton Pawlik + Nick Reed*
+
 ## Turbolinks 2.2.0 (January 10, 2014)
 
 *   Add transition cache feature. When enabled, cached copies of pages will be shown
