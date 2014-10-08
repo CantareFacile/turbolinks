@@ -1,3 +1,81 @@
+## Turbolinks (master)
+
+*   Avoid double requests when the server returns a cross origin redirect by directly loading the
+    redirect location.
+
+    *Hsiaoming Yang*
+
+## Turbolinks 2.4.0 (October 2, 2014)
+
+*   Expose event list via `Turbolinks.EVENTS`.
+
+    *Robert Mosolgo, William Meleyal*
+
+*   Add a `page:before-unload` event, triggered immediately before the page is changed.  The
+    event is triggered regardless of where the page came from (server vs cache).
+
+    Note that this event is not canceleable like the similarly named native event `beforeunload`,
+    and therefore should not be viewed as counterparts.
+
+    *Nick Reed*
+
+*   If the Prototype library is loaded, additionally trigger events with `Event.fire` so they can be
+    observed using Prototype methods like `.on()` and `.observe()`.
+
+    *Nick Reed*
+
+*   Maintain correct load order of scripts in the `body` by explicitly setting `async` to false if it is
+    not already set.
+
+    *Nick Reed*
+
+*   Include the target URL in the event data for the `page:before-change` event.
+
+    *Nick Reed*
+
+*   Fix issue where clicking a link with `href="#"` would not be ignored by Turbolinks when the current location 
+    already ends in an empty anchor.
+
+    *Nick Reed*
+
+*   Handle HTML parsing inconsistencies present in Safari 7.1+.
+
+    *Nick Reed*
+
+*   Only set the request_method cookie after non-GET requests.
+
+    *Matt Brictson*
+
+## Turbolinks 2.3.0 (August 21, 2014)
+
+*   Revert pushState timing behavior to how it was prior to v2.2.0. The URL will not change until the request
+    returns from the server and the response is determined to be valid.  This notably fixes the behavior of 
+    the back button after a Rails error page is loaded.
+
+    Note that any functions bound to `page:fetch` or `page:before-change` can no longer depend on `document.location`
+    to determine the URL of the new page.  Instead, use the data bound to the event object (`e.originalEvent.data.url`).
+
+    *Nick Reed*
+
+## Turbolinks 2.2.3 (August 19, 2014)
+
+*   Fix HTML5 autofocus for Firefox.
+
+    *Nick Reed*
+
+*   Prevent `url_for` errors when using _unsupported_ Ruby 1.8.  Note that `link_to :back` and 
+    `redirect_to :back` will not function properly when using Turbolinks with Ruby 1.8.
+
+    *Nick Reed*
+
+*   Fix handling of anchors/hashes with respect to navigating the browser history.
+
+    *Nick Reed*
+
+*   Add support for Rails 4.2.
+
+    *Aaron Patterson*
+    
 ## Turbolinks 2.2.2 (April 6, 2014)
 
 *   Always use absolute URLs as cache keys and in state objects.  Eliminates possibility of multiple 
