@@ -2,13 +2,13 @@ define 'turbolinks', ->
   pageCache               = {}
   cacheSize               = 10
   transitionCacheEnabled  = false
+  progressBar             = null
 
   currentState            = null
   loadedAssets            = null
 
   referer                 = null
 
-  createDocument          = null
   xhr                     = null
 
   EVENTS =
@@ -27,10 +27,11 @@ define 'turbolinks', ->
 
     rememberReferer()
     cacheCurrentPage()
+    progressBar?.start()
 
     if transitionCacheEnabled and cachedPage = transitionCacheFor(url.absolute)
       fetchHistory cachedPage
-      fetchReplacement url
+      fetchReplacement url, null, false
     else
       fetchReplacement url, resetScrollPosition
 
@@ -41,7 +42,14 @@ define 'turbolinks', ->
   enableTransitionCache = (enable = true) ->
     transitionCacheEnabled = enable
 
-  fetchReplacement = (url, onLoadFunction = =>) ->
+  enableProgressBar = (enable = true) ->
+    if enable
+      progressBar ?= new ProgressBar 'html'
+    else
+      progressBar?.uninstall()
+      progressBar = null
+
+  fetchReplacement = (url, onLoadFunction, showProgressBar = true) ->
     triggerEvent EVENTS.FETCH, url: url.absolute
 
     xhr?.abort()
@@ -55,13 +63,21 @@ define 'turbolinks', ->
 
       if doc = processResponse()
         reflectNewUrl url
+        reflectRedirectedUrl()
         changePage extractTitleAndBody(doc)...
         manuallyTriggerHashChangeForFirefox()
-        reflectRedirectedUrl()
-        onLoadFunction()
+        onLoadFunction?()
         triggerEvent EVENTS.LOAD
       else
         document.location.href = crossOriginRedirect() or url.absolute
+
+    if progressBar and showProgressBar
+      xhr.onprogress = (event) =>
+        percent = if event.lengthComputable
+          event.loaded / event.total * 100
+        else
+          progressBar.value + (100 - progressBar.value) / 10
+        progressBar.advanceTo(percent)
 
     xhr.onloadend = -> xhr = null
     xhr.onerror   = -> document.location.href = url.absolute
@@ -111,6 +127,7 @@ define 'turbolinks', ->
     setAutofocusElement()
     executeScriptTags() if runScripts
     currentState = window.history.state
+    progressBar?.done()
     triggerEvent EVENTS.CHANGE
     triggerEvent EVENTS.UPDATE
 
@@ -144,7 +161,7 @@ define 'turbolinks', ->
     if location = xhr.getResponseHeader 'X-XHR-Redirected-To'
       location = new ComponentUrl location
       preservedHash = if location.hasNoHash() then document.location.hash else ''
-      window.history.replaceState currentState, '', location.href + preservedHash
+      window.history.replaceState window.history.state, '', location.href + preservedHash
 
   crossOriginRedirect = ->
     redirect if (redirect = xhr.getResponseHeader('Location'))? and (new ComponentUrl(redirect)).crossOrigin()
@@ -243,68 +260,12 @@ define 'turbolinks', ->
       if current.token? and latest? and current.token isnt latest
         current.node.setAttribute 'content', latest
 
-  browserCompatibleDocumentParser = ->
-    createDocumentUsingParser = (html) ->
-      (new DOMParser).parseFromString html, 'text/html'
-
-    createDocumentUsingDOM = (html) ->
-      doc = document.implementation.createHTMLDocument ''
-      doc.documentElement.innerHTML = html
-      doc
-
-    createDocumentUsingWrite = (html) ->
-      doc = document.implementation.createHTMLDocument ''
-      doc.open 'replace'
-      doc.write html
-      doc.close()
-      doc
-
-    createDocumentUsingFragment = (html) ->
-      head = html.match(/<head[^>]*>([\s\S.]*)<\/head>/i)?[0] or '<head></head>'
-      body = html.match(/<body[^>]*>([\s\S.]*)<\/body>/i)?[0] or '<body></body>'
-      htmlWrapper = document.createElement 'html'
-      htmlWrapper.innerHTML = head + body
-      doc = document.createDocumentFragment()
-      doc.appendChild htmlWrapper
-      doc
-
-    # Use createDocumentUsingParser if DOMParser is defined and natively
-    # supports 'text/html' parsing (Firefox 12+, IE 10)
-    #
-    # Use createDocumentUsingDOM if createDocumentUsingParser throws an exception
-    # due to unsupported type 'text/html' (Firefox < 12, Opera)
-    #
-    # Use createDocumentUsingWrite if:
-    #  - DOMParser isn't defined
-    #  - createDocumentUsingParser returns null due to unsupported type 'text/html' (Chrome, Safari)
-    #  - createDocumentUsingDOM doesn't create a valid HTML document (safeguarding against potential edge cases)
-    #
-    # Use createDocumentUsingFragment if the previously selected parser does not
-    # correctly parse <form> tags. (Safari 7.1+ - see github.com/rails/turbolinks/issues/408)
-    buildTestsUsing = (createMethod) ->
-      buildTest = (fallback, passes) ->
-        passes: passes()
-        fallback: fallback
-
-      structureTest = buildTest createDocumentUsingWrite, =>
-        (createMethod '<html><body><p>test')?.body?.childNodes.length is 1
-
-      formNestingTest = buildTest createDocumentUsingFragment, =>
-        (createMethod '<html><body><form></form><div></div></body></html>')?.body?.childNodes.length is 2
-
-      [structureTest, formNestingTest]
-
-    try
-      if window.DOMParser
-        docTests = buildTestsUsing createDocumentUsingParser
-        createDocumentUsingParser
-    catch e
-      docTests = buildTestsUsing createDocumentUsingDOM
-      createDocumentUsingDOM
-    finally
-      for docTest in docTests
-        return docTest.fallback unless docTest.passes
-
+  createDocument = (html) ->
+    doc = document.documentElement.cloneNode()
+    doc.innerHTML = html
+    doc.head = doc.querySelector 'head'
+    doc.body = doc.querySelector 'body'
+    doc
 
   # The ComponentUrl class converts a basic URL string into an object
   # that behaves similarly to document.location.
@@ -412,6 +373,102 @@ define 'turbolinks', ->
         @event.altKey
 
 
+  class ProgressBar
+    className = 'turbolinks-progress-bar'
+
+    constructor: (@elementSelector) ->
+      @value = 0
+      @opacity = 1
+      @content = ''
+      @speed = 300
+      @install()
+
+    install: ->
+      @element = document.querySelector(@elementSelector)
+      @element.classList.add(className)
+      @styleElement = document.createElement('style')
+      document.head.appendChild(@styleElement)
+      @_updateStyle()
+
+    uninstall: ->
+      @element.classList.remove(className)
+      document.head.removeChild(@styleElement)
+
+    start: ->
+      @advanceTo(5)
+
+    advanceTo: (value) ->
+      if value > @value <= 100
+        @value = value
+        @_updateStyle()
+
+        if @value is 100
+          @_stopTrickle()
+        else if @value > 0
+          @_startTrickle()
+
+    done: ->
+      if @value > 0
+        @advanceTo(100)
+        @_reset()
+
+    _reset: ->
+      setTimeout =>
+        @opacity = 0
+        @_updateStyle()
+      , @speed / 2
+
+      setTimeout =>
+        @value = 0
+        @opacity = 1
+        @_withSpeed(0, => @_updateStyle(true))
+      , @speed
+
+    _startTrickle: ->
+      return if @trickling
+      @trickling = true
+      setTimeout(@_trickle, @speed)
+
+    _stopTrickle: ->
+      delete @trickling
+
+    _trickle: =>
+      return unless @trickling
+      @advanceTo(@value + Math.random() / 2)
+      setTimeout(@_trickle, @speed)
+
+    _withSpeed: (speed, fn) ->
+      originalSpeed = @speed
+      @speed = speed
+      result = fn()
+      @speed = originalSpeed
+      result
+
+    _updateStyle: (forceRepaint = false) ->
+      @_changeContentToForceRepaint() if forceRepaint
+      @styleElement.textContent = @_createCSSRule()
+
+    _changeContentToForceRepaint: ->
+      @content = if @content is '' then ' ' else ''
+
+    _createCSSRule: ->
+      """
+      #{@elementSelector}.#{className}::before {
+        content: '#{@content}';
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 2000;
+        background-color: #0076ff;
+        height: 3px;
+        opacity: #{@opacity};
+        width: #{@value}%;
+        transition: width #{@speed}ms ease-out, opacity #{@speed / 2}ms ease-in;
+        transform: translate3d(0,0,0);
+      }
+      """
+
+
   # Delay execution of function long enough to miss the popstate event
   # some browsers fire on the initial page load.
   bypassOnLoadPopstate = (fn) ->
@@ -440,7 +497,6 @@ define 'turbolinks', ->
   initializeTurbolinks = ->
     rememberCurrentUrl()
     rememberCurrentState()
-    createDocument = browserCompatibleDocumentParser()
 
     document.addEventListener 'click', Click.installHandlerLast, true
 
@@ -491,6 +547,7 @@ define 'turbolinks', ->
     visit,
     pagesCached,
     enableTransitionCache,
+    enableProgressBar,
     allowLinkExtensions: Link.allowExtensions,
     supported: browserSupportsTurbolinks,
     EVENTS: clone(EVENTS)
