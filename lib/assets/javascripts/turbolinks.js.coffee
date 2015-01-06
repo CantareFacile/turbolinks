@@ -70,6 +70,7 @@ define 'turbolinks', ->
         onLoadFunction?()
         triggerEvent EVENTS.LOAD
       else
+        progressBar?.done()
         document.location.href = crossOriginRedirect() or url.absolute
 
     if progressBar and showProgressBar
@@ -229,6 +230,10 @@ define 'turbolinks', ->
       (contentType = xhr.getResponseHeader('Content-Type'))? and
         contentType.match /^(?:text\/html|application\/xhtml\+xml|application\/xml)(?:;|$)/
 
+    downloadingFile = ->
+      (disposition = xhr.getResponseHeader('Content-Disposition'))? and
+        disposition.match /^attachment/
+
     extractTrackAssets = (doc) ->
       for node in doc.querySelector('head').childNodes when node.getAttribute?('data-turbolinks-track')?
         node.getAttribute('src') or node.getAttribute('href')
@@ -242,7 +247,7 @@ define 'turbolinks', ->
       [a, b] = [b, a] if a.length > b.length
       value for value in a when value in b
 
-    if not clientOrServerError() and validContent()
+    if not clientOrServerError() and validContent() and not downloadingFile()
       doc = createDocument xhr.responseText
       if doc and !assetsChanged doc
         return doc
@@ -379,9 +384,11 @@ define 'turbolinks', ->
 
     constructor: (@elementSelector) ->
       @value = 0
-      @opacity = 1
       @content = ''
       @speed = 300
+      # Setting the opacity to a value < 1 fixes a display issue in Safari 6 and
+      # iOS 6 where the progress bar would fill the entire page.
+      @opacity = 0.99
       @install()
 
     install: ->
@@ -414,6 +421,8 @@ define 'turbolinks', ->
         @_reset()
 
     _reset: ->
+      originalOpacity = @opacity
+
       setTimeout =>
         @opacity = 0
         @_updateStyle()
@@ -421,7 +430,7 @@ define 'turbolinks', ->
 
       setTimeout =>
         @value = 0
-        @opacity = 1
+        @opacity = originalOpacity
         @_withSpeed(0, => @_updateStyle(true))
       , @speed
 
