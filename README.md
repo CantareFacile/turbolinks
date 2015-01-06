@@ -21,7 +21,7 @@ The best way to find out just how fast it is? Try it on your own application. It
 No jQuery or any other library
 --------------------------------
 
-Turbolinks is designed to be as light-weight as possible (so you won't think twice about using it even for mobile stuff). It does not require jQuery or any other library to work. But it works great _with_ the jQuery or Prototype framework, or whatever else have you.
+Turbolinks is designed to be as light-weight as possible (so you won't think twice about using it even for mobile stuff). It does not require jQuery or any other library to work. But it works great _with_ the jQuery or Prototype framework, or whatever else you have.
 
 
 Events
@@ -68,7 +68,13 @@ $(document).on("page:fetch", startSpinner);
 $(document).on("page:receive", stopSpinner);
 ```
 
-DOM transformations that are idempotent are best. If you have transformations that are not, hook them to happen only on `page:load` instead of `page:change` (as that would run them again on the cached pages).
+DOM transformations that are idempotent are best. If you have transformations that are not, bind them to `page:load` (in addition to the initial page load) instead of `page:change` (as that would run them again on the cached pages):
+
+```javascript
+// using jQuery for simplicity
+
+$(document).on("ready page:load", nonIdempotentFunction);
+```
 
 Transition Cache: A Speed Boost
 -------------------------------
@@ -82,7 +88,7 @@ To enable Transition Cache, include the following in your javascript:
 Turbolinks.enableTransitionCache();
 ```
 
-The one drawback is that dramatic differences in appearence between a cached copy and new copy may lead to a jarring affect for the end-user. This will be especially true for pages that have many moving parts (expandable sections, sortable tables, infinite scrolling, etc.).
+The one drawback is that dramatic differences in appearance between a cached copy and new copy may lead to a jarring affect for the end-user. This will be especially true for pages that have many moving parts (expandable sections, sortable tables, infinite scrolling, etc.).
 
 If you find that a page is causing problems, you can have Turbolinks skip displaying the cached copy by adding `data-no-transition-cache` to any DOM element on the offending page.
 
